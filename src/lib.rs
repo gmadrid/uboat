@@ -10,7 +10,7 @@ use proc_macro2::TokenStream as TokenStream2;
 struct Commands<'a> {
     elem_name: &'a Ident,
     commands: Vec<CommandDesc<'a>>,
-}    
+}
 
 #[derive(Debug)]
 struct CommandDesc<'a> {
@@ -18,28 +18,35 @@ struct CommandDesc<'a> {
 }
 
 fn extract_commands(input: &DeriveInput) -> Commands {
-//    dbg!(input);
+    //    dbg!(input);
     if let Data::Enum(data_enum) = &input.data {
-//	dbg!(data_enum);
-	let commands = data_enum.variants.iter().map(|variant| {
-	    CommandDesc { name: &variant.ident }
-	}).collect();
-	Commands { elem_name: &input.ident, commands }
+        //	dbg!(data_enum);
+        let commands = data_enum
+            .variants
+            .iter()
+            .map(|variant| CommandDesc {
+                name: &variant.ident,
+            })
+            .collect();
+        Commands {
+            elem_name: &input.ident,
+            commands,
+        }
     } else {
-	panic!("Uboat only allowed on enums.");
+        panic!("Uboat only allowed on enums.");
     }
 }
 
 fn make_match_arms(commands: Commands) -> TokenStream2 {
     let elem_name = commands.elem_name;
     let arms = commands.commands.iter().map(|cmd| {
-	let name = cmd.name;
-	quote! { #elem_name::#name{} => { Ok(())  } }
+        let name = cmd.name;
+        quote! { #elem_name::#name{} => { Ok(())  } }
     });
     quote! {
-	#(
-	    #arms
-	)*
+    #(
+        #arms
+    )*
     }
 }
 
@@ -47,13 +54,16 @@ fn make_dispatch_func(commands: Commands) -> TokenStream2 {
     let elem_name = commands.elem_name;
     let match_arms = make_match_arms(commands);
     quote! {
-	fn dispatch() -> std::result::Result<(),Error> {
-	    //	    let sc = Foobar::from_args();
-	    let sc = #elem_name::from_args();
-	    match sc {
-		#match_arms
-	    }
-	}
+	fn dispatch_from_iter<I>(iter: I) -> Self
+          where Self: Sized, I:IntoIterator, I::Item: Into<std::ffi::OsString> + Clone {
+            unimplemented!()
+        }
+        fn dispatch() -> std::result::Result<(),Error> {
+            let sc = #elem_name::from_args();
+            match sc {
+                #match_arms
+            }
+        }
     }
 }
 
@@ -66,9 +76,15 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let dispatch_func = make_dispatch_func(commands);
 
     let q = quote! {
-	impl #elem_name {
-	    #dispatch_func
-	}
+    trait UboatCaptain {
+        fn dispatch_from_iter<I>(iter: I) -> Self
+	  where Self: Sized, I:IntoIterator, I::Item: Into<std::ffi::OsString> + Clone;
+        fn dispatch() -> std::result::Result<(), Error>;
+    }
+
+    impl UboatCaptain for #elem_name {
+        #dispatch_func
+    }
     };
     q.into()
 }
@@ -111,7 +127,6 @@ pub fn derive(input: TokenStream) -> TokenStream {
     }
   }
 */
-
 
 #[test]
 fn trybuild() {

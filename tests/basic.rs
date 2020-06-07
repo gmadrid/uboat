@@ -14,6 +14,6 @@ pub enum Basic {
 fn main() -> std::result::Result<(), Error> {
     // Capture the error, because we've provided no arguments.
     Basic::dispatch()?;
-    
+
     Ok(())
 }
