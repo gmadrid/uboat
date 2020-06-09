@@ -15,17 +15,24 @@ struct Commands<'a> {
 #[derive(Debug)]
 struct CommandDesc<'a> {
     name: &'a Ident,
+    fields: Vec<&'a Ident>,
 }
 
 fn extract_commands(input: &DeriveInput) -> Commands {
-    //    dbg!(input);
     if let Data::Enum(data_enum) = &input.data {
-        //	dbg!(data_enum);
         let commands = data_enum
             .variants
             .iter()
-            .map(|variant| CommandDesc {
-                name: &variant.ident,
+            .map(|variant| {
+                //dbg!(variant);
+                let fields = variant.fields.iter().map(|f| {
+                    // This only works with named struct variants.
+                    f.ident.as_ref().unwrap()
+                }).collect();
+                CommandDesc {
+                    name: &variant.ident,
+                    fields,
+                }
             })
             .collect();
         Commands {
@@ -38,11 +45,15 @@ fn extract_commands(input: &DeriveInput) -> Commands {
 }
 
 fn make_match_arms(commands: Commands) -> TokenStream2 {
-    let elem_name = commands.elem_name;
+    use heck::SnakeCase;
+
     let arms = commands.commands.iter().map(|cmd| {
         let name = cmd.name;
-        quote! { #elem_name::#name{} => { Ok(())  } }
+        let fields = &cmd.fields;
+        let func_name = Ident::new(&name.to_string().to_snake_case(), name.span());
+        quote! { Self::#name{ #(#fields),* } => crate::#func_name(#(#fields),*), }
     });
+
     quote! {
     #(
         #arms
@@ -51,16 +62,10 @@ fn make_match_arms(commands: Commands) -> TokenStream2 {
 }
 
 fn make_dispatch_func(commands: Commands) -> TokenStream2 {
-    let elem_name = commands.elem_name;
     let match_arms = make_match_arms(commands);
     quote! {
-	fn dispatch_from_iter<I>(iter: I) -> Self
-          where Self: Sized, I:IntoIterator, I::Item: Into<std::ffi::OsString> + Clone {
-            unimplemented!()
-        }
-        fn dispatch() -> std::result::Result<(),Error> {
-            let sc = #elem_name::from_args();
-            match sc {
+        fn dispatch_self(&self) -> std::result::Result<(), Error> {
+            match self {
                 #match_arms
             }
         }
@@ -77,9 +82,15 @@ pub fn derive(input: TokenStream) -> TokenStream {
 
     let q = quote! {
     trait UboatCaptain {
-        fn dispatch_from_iter<I>(iter: I) -> Self
-	  where Self: Sized, I:IntoIterator, I::Item: Into<std::ffi::OsString> + Clone;
-        fn dispatch() -> std::result::Result<(), Error>;
+        fn dispatch_from_iter<I>(iter: I) -> std::result::Result<(), Error>
+          where Self: Sized + structopt::StructOpt, I:IntoIterator, I::Item: Into<std::ffi::OsString> + Clone {
+            Self::dispatch_self(&Self::from_iter(iter))
+        }
+        fn dispatch() -> std::result::Result<(), Error>
+          where Self: Sized + structopt::StructOpt {
+            Self::dispatch_self(&Self::from_args())
+        }
+        fn dispatch_self(&self) -> std::result::Result<(), Error>;
     }
 
     impl UboatCaptain for #elem_name {
@@ -131,5 +142,5 @@ pub fn derive(input: TokenStream) -> TokenStream {
 #[test]
 fn trybuild() {
     let t = trybuild::TestCases::new();
-    t.pass("tests/basic.rs");
+    t.pass("tests/*.rs");
 }
