@@ -11,6 +11,10 @@ proc-macro = true
 name = "main"
 path = "src/main.rs"
 
+[[test]]
+name = "tests"
+path = "tests/macro_tests.rs"
+
 [dev-dependencies]
 trybuild = "1.0.28"
 

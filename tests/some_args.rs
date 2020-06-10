@@ -7,22 +7,22 @@ pub struct Error;
 #[derive(StructOpt, Uboat)]
 #[uboat]
 pub enum Basic {
-    CommandOne,
-    CommandTwo { a_string: String },
+    CommandOne { a_string: String },
+    CommandTwo { an_int: u32, a_string: String },
 }
 
-pub fn command_one() -> Result<(), Error> {
-    println!("ONE");
+pub fn command_one(a_string: &str) -> Result<(), Error> {
+    println!("ONE: {}", a_string);
     Ok(())
 }
 
-pub fn command_two(a_string: &str) -> Result<(), Error> {
-    println!("TWO: {}", a_string);
+pub fn command_two(an_int: &u32, a_string: &str) -> Result<(), Error> {
+    println!("TWO: an_int: {}, a_string: {}", an_int, a_string);
     Ok(())
 }
 
 fn main() -> std::result::Result<(), Error> {
-    Basic::dispatch_from_iter(&["binary_name", "command-one"])?;
-    Basic::dispatch_from_iter(&["binary_name", "command-two", "a_string_value"])?;
+    Basic::dispatch_from_iter(&["binary_name", "command-one", "string_one"])?;
+    Basic::dispatch_from_iter(&["binary_name", "command-two", "543", "string_two"])?;
     Ok(())
 }

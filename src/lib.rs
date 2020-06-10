@@ -25,10 +25,14 @@ fn extract_commands(input: &DeriveInput) -> Commands {
             .iter()
             .map(|variant| {
                 //dbg!(variant);
-                let fields = variant.fields.iter().map(|f| {
-                    // This only works with named struct variants.
-                    f.ident.as_ref().unwrap()
-                }).collect();
+                let fields = variant
+                    .fields
+                    .iter()
+                    .map(|f| {
+                        // This only works with named struct variants.
+                        f.ident.as_ref().unwrap()
+                    })
+                    .collect();
                 CommandDesc {
                     name: &variant.ident,
                     fields,
@@ -138,9 +142,3 @@ pub fn derive(input: TokenStream) -> TokenStream {
     }
   }
 */
-
-#[test]
-fn trybuild() {
-    let t = trybuild::TestCases::new();
-    t.pass("tests/*.rs");
-}
