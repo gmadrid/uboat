@@ -55,7 +55,7 @@ fn make_match_arms(commands: Commands) -> TokenStream2 {
         let name = cmd.name;
         let fields = &cmd.fields;
         let func_name = Ident::new(&name.to_string().to_snake_case(), name.span());
-        quote! { Self::#name{ #(#fields),* } => crate::#func_name(#(#fields),*), }
+        quote! { Self::#name{ #(#fields),* } => #func_name(#(#fields),*), }
     });
 
     quote! {
@@ -85,7 +85,7 @@ pub fn derive(input: TokenStream) -> TokenStream {
     let dispatch_func = make_dispatch_func(commands);
 
     let q = quote! {
-    trait UboatCaptain {
+    pub trait UboatCaptain {
         fn dispatch_from_iter<I>(iter: I) -> std::result::Result<(), Error>
           where Self: Sized + structopt::StructOpt, I:IntoIterator, I::Item: Into<std::ffi::OsString> + Clone {
             Self::dispatch_self(&Self::from_iter(iter))
